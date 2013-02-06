@@ -1,0 +1,453 @@
+/* Promela grammar, taken from Holzmann's SPIN book */
+/* modified by dewin dennis.winter@uni-duesseldorf.de 2008 */
+
+Package promela;
+
+Helpers
+
+  // letters and digits
+  alpha = [['a' .. 'z'] + ['A' .. 'Z']];
+  digit = ['0' .. '9'] ;
+  byterange = [0 .. 255];
+  any_ascii_char = [[0 .. 0xffff] - '"']; /* THIS IS ACTUALLY ANY UNICODE CHARACTER */
+    unicode_input_character = [0..0xffff];
+    ht  = 0x0009;
+    lf  = 0x000a;
+    ff  = 0x000c;
+    cr  = 0x000d;
+    sp  = ' ';
+    line_terminator = lf | cr | cr lf;
+    input_character = [unicode_input_character - [cr + lf]];
+    not_star =    [input_character - '*'] | line_terminator;
+    not_star_not_slash = [input_character - ['*' + '/']] | line_terminator;
+
+Tokens
+    white_space = (sp | ht | ff | line_terminator)*;
+    //traditional_comment = '/*' not_star+ '*'+ (not_star_not_slash not_star* '*'+)* '/';
+    traditional_comment = '/*' not_star* '*'+ (not_star_not_slash not_star* '*'+)* '/';
+    end_of_line_comment = '//' input_character* line_terminator?;
+
+    number = digit+;
+ 
+    bang = '!';
+
+    complement = '~';
+    multop = '*' | '/' | '%';
+    plus = '+';
+    minus = '-';
+    shiftop = '<<' | '>>';
+    eqop = '==' | '!=';
+    bitand = '&';
+    bitor = '|';
+    bitxor = '^';
+    and = '&&';
+    or = '||';
+
+    lt = '<';
+    gt = '>';
+
+    relop = '<=' | '>=';
+
+
+    l_parenthese = '(';
+    r_parenthese = ')';
+
+    l_brace = '{';
+    r_brace = '}';
+
+    l_bracket = '[';
+    r_bracket = ']';
+
+    semicolon = ';'; 
+
+	number_sign = '#';
+    comma = ',';
+    dot = '.';
+    assign = '=';
+    colon_colon = '::';
+    colon = ':';
+    plus_plus = '++';
+    minus_minus = '--';
+    rightarrow = '->';
+
+    bang_bang = '!!';
+
+    query_query = '??';
+    query = '?';
+    underscore = '_';
+    quotes = '"';
+    at = '@';
+	apostrophe = ''';
+	backslash = '\';
+
+    activetok = 'active';
+    assert = 'assert';
+    atomic = 'atomic';
+    bit = 'bit';
+    bool = 'bool';
+    break = 'break';
+    byte = 'byte';
+    chanop = 'full' | 'empty' | 'nfull' | 'nempty';
+    chan = 'chan';
+    d_step = 'd_step';
+    do = 'do';
+    else = 'else';
+    enabled ='enabled';
+    eval = 'eval';
+    false = 'false';
+    fi = 'fi';
+    goto ='goto';
+    hidden = 'hidden';
+    if = 'if';
+    inittok = 'init';
+    int = 'int';
+    len = 'len';
+	line = 'line';
+    mtypetok = 'mtype';
+    nevertok = 'never';
+    notrace = 'notrace';
+    np = 'np_';
+    od = 'od';
+    of = 'of';
+    pc_value = 'pc_value';
+    pid = 'pid';
+    printf = 'printf';
+    printm = 'printm';
+    prioritytok = 'priority';
+    processid = '_pid';
+    nr_pr = '_nr_pr';
+    inlinetok = 'inline';
+    proctypetok = 'proctype';
+    provided = 'provided';
+    run = 'run';
+    short = 'short';
+    show = 'show';
+    skip = 'skip';
+    timeout = 'timeout';
+    tracetok = 'trace';
+    true = 'true';
+    typedef = 'typedef';
+    unless = 'unless';
+    unsigned = 'unsigned';
+    xr = 'xr';
+    xs = 'xs';
+
+    name = alpha (alpha | digit | '_')*;  /* NEED TO CHECK THAT THIS CORRECTLY DEFINES NAMES - ADD _pid as special case */
+    byteliteral = byterange;
+    string = '"' any_ascii_char* '"';
+ 
+
+/*******************************************************************
+ * Ignored Tokens                                                  *
+ *******************************************************************/
+Ignored Tokens
+
+  white_space,
+  traditional_comment,
+  end_of_line_comment;
+
+/*******************************************************************
+ * Productions                                                     *
+ *******************************************************************/
+Productions
+
+  spec = 
+    module+ ;
+
+  module =
+   {cpp_comment} cpp_comment |				/* comments from the C-preprocessor */
+   {anarres_cpp_comment} anarres_cpp_comment |      /* comments from the anarres C-preprocessor */
+   {utype} utype separator? |		/* user defined types */
+   {mtype} mtype separator? |		/* mtype declaration */
+   {varschans} one_decl separator? |    /* global vars, chans */
+   {inline} inline |            /* inline declaration */
+   {proctype} proctype | 	/* proctype declaration */
+   {init} init |		/* init process - max 1 per model */
+   {never} never |		/* never claim - max 1 per model */
+   {trace} trace ;		/* event trace - max 1 per model */
+
+  cpp_comment = 
+   {long} number_sign [first]:number string [second]:number |
+   {short} number_sign number string ;
+
+  anarres_cpp_comment = 
+   number_sign line [first]:number string [second]:number;
+
+  inline =
+   inlinetok name l_parenthese arg_lst? r_parenthese l_brace sequence r_brace ;
+
+  proctype =
+   active? proctypetok name l_parenthese decl_lst? r_parenthese priority? enabler? l_brace sequence r_brace ;
+
+  init =
+   inittok priority? l_brace sequence r_brace ;
+
+  never =
+   nevertok l_brace sequence r_brace ;
+
+  trace =
+   {trace} tracetok l_brace sequence r_brace |
+   {notrace} notrace l_brace sequence r_brace ;
+
+  utype =
+   typedef name l_brace udecl+ r_brace ;
+
+  udecl =
+   one_decl separator? ;
+
+  mtype =
+   mtypetok assign? l_brace name_lst r_brace ;
+
+  name_lst =
+   {one} name |
+   {many} name comma name_lst ;
+
+  decl_lst =
+   {one} one_decl |
+   {many} one_decl separator decl_lst ;
+
+  one_decl =
+   visible? typename ivar_lst ;
+
+  ivar_lst =
+   {one} ivar |
+   {many} ivar comma ivar_lst ;
+
+  typename =
+   {bit} bit |
+   {bool} bool |
+   {byte} byte |
+   {pid} pid |
+   {short} short |
+   {int} int |
+   {mtype} mtypetok |
+   {chan} chan |
+   {uname} name |		/* user defined typenames (see utype) */
+   {unsigned} unsigned; /* unsigned is not in the SPIN book grammar */
+
+  typenamelst =
+   {one} typename |
+   {many} typename comma typenamelst ;
+
+  active =
+   {one} activetok |
+   {many} activetok l_bracket const r_bracket ;	/* instantiation */
+
+  priority =
+   prioritytok const ;		/* simulation only */
+
+  enabler =
+   provided l_parenthese expr r_parenthese ;	/* constraint */
+
+  visible =
+   {hidden} hidden |
+   {show} show ;
+
+  sequence =
+   {null}  |
+   {one} step |
+   {many} step separator sequence |
+   {atomic} atomic l_brace [main]:sequence r_brace separator? [next]:sequence |
+   {dstep} d_step l_brace [main]:sequence r_brace separator? [next]:sequence |
+   {braces} l_brace [main]:sequence r_brace separator? [next]:sequence |
+   {label} name colon sequence |
+   {else} else separator? sequence ;
+
+  step =
+/*   {declarations} decl_lst |  */  /* THIS IS WHAT IT SHOULD BE BUT IT GIVES A SHIFT/REDUCE */
+   {declaration} one_decl |
+   {stmnt} stmnt |
+   {unless} [main]:stmnt unless [escape]:stmnt |
+   {exreceive} xr varreflst |
+   {exsend} xs varreflst ;
+
+  varreflst =
+   {one} varref |
+   {many} varref comma varreflst ;
+
+  ivar =
+   {single} name width? ivarassignment? |
+   {array} name l_bracket const r_bracket ivarassignment? ;
+
+  ivarassignment =
+   {variable} assign expr |
+   {channel} assign l_bracket const r_bracket of l_brace typenamelst r_brace;
+
+  width =
+   colon const;
+
+  varref =
+   {single} name arrayref? |
+   {record} varref dot name arrayref? |
+   {string} [left]:apostrophe backslash? name [right]:apostrophe ;
+
+  arrayref =
+   l_bracket expr r_bracket ;
+
+/*  varref =
+   {single} name recordref? |
+   {array} name l_bracket expr r_bracket recordref? ;
+*/
+
+  recordref =
+   dot varref ;
+
+  send =
+   {fifo} varref bang send_args |	/* fifo send */
+   {sorted} varref bang_bang send_args ;	/* sorted send */
+
+  receive =
+   {fifo} varref query recv_args |	/* fifo receive */
+   {random} varref query_query recv_args |	/* random receive */
+   {fifopoll} varref query lt recv_args gt |	/* poll */
+   {randompoll} varref query_query lt recv_args gt ;
+
+  recv_poll =
+   {fifo} varref query l_bracket recv_args r_bracket | 	/* test */
+   {random} varref query_query l_bracket recv_args r_bracket ;
+
+  send_args =
+   {list} arg_lst |
+   {headedlist} expr l_parenthese arg_lst r_parenthese ;
+
+  arg_lst =
+   {one} expr |
+   {many} expr comma arg_lst ;
+
+  recv_args =
+   {one} recv_arg |
+   {many} recv_arg comma recv_args |
+   {manyheaded1} recv_arg l_parenthese recv_args r_parenthese |
+   {manyheaded2} l_parenthese recv_args r_parenthese ;
+
+  recv_arg =
+   {var} varref |
+   {eval} eval l_parenthese expr r_parenthese |
+   {const} const |
+   {underscore} underscore ;
+
+  assignment =
+   {assignment} varref assign expr |	/* assignment */
+   {increment} varref plus_plus |		/* increment */
+   {decrement} varref minus_minus ;		/* decrement */
+
+  stmnt =
+   {run_inline} name l_parenthese arg_lst? r_parenthese |
+   {if} if options fi |			/* selection */
+   {do} do options od |			/* iteration */
+   /*{atomic} atomic l_brace sequence r_brace |
+     {dstep} d_step l_brace sequence r_brace |
+     {braces} l_brace sequence r_brace |*/
+   {send} send |
+   {receive} receive |
+   {assign} assignment |
+   /*{else} else |					 guard statement */
+   {break} break |					/* only inside loops */
+   {goto} goto name |					/* anywhere */
+   /*{label} name colon stmnt |*/
+   {printm} printm l_parenthese expr r_parenthese |				
+   {printf} printf l_parenthese string r_parenthese |
+   {printwithargs} printf l_parenthese string comma arg_lst r_parenthese |
+   {assert} assert expr |
+   {expression} expr ;					/* condition */
+
+  options =
+   colon_colon sequence options? ;
+
+  factor =
+   {parenthese} l_parenthese expr r_parenthese |
+   {length} len l_parenthese varref r_parenthese |	 /* nr of messages in chan */ 
+   {recv_poll} recv_poll |
+   {varref} varref |
+   {const} const |
+   {timeout} timeout |				 /* hang system state */ 
+   {nonprogress} np |			 	 /* non-progress system state */ 
+   {enabled} enabled l_parenthese expr r_parenthese |
+   {pc_value} pc_value l_parenthese expr r_parenthese |
+   {remoteref} [process]:name l_bracket expr r_bracket at [label]:name |
+   {run} run name l_parenthese arg_lst? r_parenthese priority? |
+   {chanop} chanop l_parenthese varref r_parenthese |
+   {conditional} l_parenthese [if]:expr rightarrow [then]:expr colon [else]:expr r_parenthese ;
+   
+
+  un_expr =
+    {simple} factor |
+    {not} bang factor |
+    {complement} complement factor ;
+
+  mult_expr =
+    {simple} un_expr |
+    {compound} un_expr multop mult_expr ;
+
+  add_expr =
+    {simple} mult_expr |
+    {compoundplus} mult_expr plus add_expr |
+    {compoundminus} mult_expr minus add_expr ;
+
+  shift_expr =
+    {simple} add_expr |
+    {compound} add_expr shiftop shift_expr ;
+
+  rel_expr =
+    {simple} shift_expr |
+    {compoundrelop} shift_expr relop rel_expr |
+    {compoundgt} shift_expr gt rel_expr |
+    {compoundlt} shift_expr lt rel_expr ;
+
+  eq_expr =
+    {simple} rel_expr |
+    {compound} rel_expr eqop eq_expr ;
+
+  bitand_expr =
+    {simple} eq_expr |
+    {compound} eq_expr bitand bitand_expr ;
+
+  bitxor_expr =
+    {simple} bitand_expr |
+    {compound} bitand_expr bitxor bitxor_expr ;
+
+  bitor_expr =
+    {simple} bitxor_expr |
+    {compound} bitxor_expr bitor bitor_expr ;
+
+  and_expr =
+    {simple} bitor_expr |
+    {compound} bitor_expr and and_expr ;
+
+  or_expr =
+    {simple} and_expr |
+    {compound} and_expr or or_expr ;
+
+  expr = /* This is a conditional */
+    {simple} or_expr ;
+    /* {conditional} l_parenthese [if]:expr rightarrow [then]:expr colon [else]:expr r_parenthese ; */
+
+/*  chanop_expr =
+ |
+   {bracketed} l_parenthese chanop_expr r_parenthese ;
+
+  and_chanop_expr =
+   {simple} chanop_expr |
+   {compound} chanop_expr and and_chanop_expr ;
+
+  or_chanop_expr =
+   {simple} and_chanop_expr |
+   {compound} and_chanop_expr or or_chanop_expr ;
+
+  expr = 
+   {simple} any_expr | 
+   {chanop} or_chanop_expr ;*/
+
+  const =
+   {true} true |
+   {false} false |
+   {skip} skip |
+   {number} minus? number |
+   {pid} processid |
+   {nr_pr} nr_pr ;
+   
+  separator =
+   {semicolon} semicolon+ |
+   {rightarrow} rightarrow ;
+
+// end of grammar

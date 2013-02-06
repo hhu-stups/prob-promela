@@ -1,0 +1,2 @@
+Main-Class: main/PromelaCompiler
+Class-Path: anarres-cpp/anarres-cpp.jar

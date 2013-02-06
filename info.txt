@@ -1,0 +1,45 @@
+ENVIRONMENT
+===========
+
+Proctypes
+---------
+proc(active(PID,Name), PC)
+
+global Variables
+----------------
+var(child(PID,PID2), true) // used in destructor
+var(type(Name), type)      // for user-defined types
+
+var(sys(pid), PID)         // Process ID
+var(sys(chan_id), CID)     // Channel ID
+var(sys(unsafe), true)     // to indicate assert violations
+var(sys(mode), MValue)     // MValue is normal, p_atomic or d_step
+
+Channels
+-------
+var(chan(Name), CID)          // global pointer to channel
+var(key(chan(Name),PID), CID) // local pointer to channel
+chan(CID, Value)              // channel (always global)
+
+Channel-Arrays
+-------------
+var(chan(Name), array(CID,K))
+chan(array(CID,K), Value)
+
+run(Process,[expr(Expr),expr(chan(Chan_Name))])
+send(Channel,[expr(Expr),expr(ctype(CType))])
+
+Initialisation of Channels
+--------------------------
+only defined:      chan(CID,empty)
+rendevous-channel: chan(CID,[])
+length 1:          chan(CID,[[empty]])
+length 2:          chan(CID,[[empty],[empty]])
+
+Assignements with Type-Check
+----------------------------
+assign(vt(Name,Type),Value)    // vt = (variable,type)
+inc(vt(Name,Type))
+dec(vt(Name,Type))
+recv_eval([vt(A,AType)|T], PID, In, Out, [R|T2])
+set_local_vars([def(Type,H1)|T1], [expr(H2)|T2], PID, PID2, In, Out)

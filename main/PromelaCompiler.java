@@ -15,11 +15,11 @@ import promela.parser.*;
 import visitors.ASTPrinter;
 import visitors.PromelaVisitor;
 
-public class Main {
+public class PromelaCompiler {
 
 private Start start;
 
-public Main(String fileIn, String appDirectory) {
+public PromelaCompiler(String fileIn, String appDirectory) {
 	
         try {
 		//File tmpFile = new File(fileIn+".pre");
@@ -117,7 +117,7 @@ public Main(String fileIn, String appDirectory) {
 			String fileIn = p.nextParam();
             if (p.hasNextParam()) {
                 String appDirectory = p.nextParam();
-                Main m = new Main(fileIn, appDirectory);
+                PromelaCompiler m = new PromelaCompiler(fileIn, appDirectory);
                 System.out.println("Generating output for interpreter: "+fileIn+".pl");
                 m.start(fileIn, fileIn+".pl");
             }

@@ -4,6 +4,6 @@ Promela.jar: promela
 promela: *.scc
 	rm -rf promela
 	java -jar ${SABLECCJAR} promela.scc
-	javac promela/*/*.java
-	javac main/*.java
+	javac -target 1.5 promela/*/*.java
+	javac -target 1.5 main/*.java
 	jar cvfm Promela.jar main/mymanifest main/ promela/ visitors/ de/
